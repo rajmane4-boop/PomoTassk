@@ -14,7 +14,7 @@ interface TaskListProps {
   tasks: Task[]
   activeTaskId: number | null
   onToggleTask: (id: number) => Promise<void>
-  onDeleteTask: (id: number) => Promise<void>
+  onDeleteTask: (task: Task) => void
   onEditTask: (task: Task) => void
   onSelectActiveTask: (task: Task) => void
   onOpenNewTask: () => void
@@ -268,8 +268,11 @@ export function TaskList({
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => onDeleteTask(task.id)}
-                          className="h-7 w-7 rounded-md hover:text-destructive hover:bg-destructive/10"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onDeleteTask(task)
+                          }}
+                          className="h-7 w-7 rounded-md hover:text-destructive hover:bg-destructive/10 cursor-pointer"
                           title="Delete Task"
                         >
                           <Trash2 className="h-3.5 w-3.5" />

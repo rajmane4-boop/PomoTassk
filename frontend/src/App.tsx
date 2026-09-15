@@ -1,9 +1,12 @@
 import { useState, useEffect, useCallback } from "react"
+import { Trash2 } from "lucide-react"
 import { Navbar } from "./components/Navbar"
 import { StatsHeader } from "./components/StatsHeader"
 import { PomodoroTimer } from "./components/PomodoroTimer"
 import { TaskList } from "./components/TaskList"
 import { TaskDialog } from "./components/TaskDialog"
+import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "./components/ui/dialog"
+import { Button } from "./components/ui/button"
 import { ToastProvider, useToast } from "./components/ui/toast"
 import { api, type Task, type DashboardStats } from "./lib/api"
 
@@ -14,6 +17,7 @@ function DashboardContent() {
   const [activeTask, setActiveTask] = useState<Task | null>(null)
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false)
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null)
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null)
   const [backendOnline, setBackendOnline] = useState(false)
   const [loading, setLoading] = useState(true)
 
@@ -75,13 +79,15 @@ function DashboardContent() {
     }
   }
 
-  // Handle task deletion
-  const handleDeleteTask = async (id: number) => {
-    const taskToDelete = tasks.find((t) => t.id === id)
-    if (!window.confirm(`Are you sure you want to delete "${taskToDelete?.title}"?`)) {
-      return
-    }
+  // Request task deletion (opens Shadcn confirmation dialog)
+  const handleDeleteTask = (task: Task) => {
+    setTaskToDelete(task)
+  }
 
+  // Execute confirmed task deletion
+  const confirmDeleteTask = async () => {
+    if (!taskToDelete) return
+    const id = taskToDelete.id
     try {
       await api.deleteTask(id)
       setTasks((prev) => prev.filter((t) => t.id !== id))
@@ -90,7 +96,7 @@ function DashboardContent() {
       }
       toast({
         title: "Task Deleted",
-        description: "The task has been permanently removed.",
+        description: `"${taskToDelete.title}" has been deleted.`,
         type: "default"
       })
       const newStats = await api.getStats()
@@ -101,6 +107,8 @@ function DashboardContent() {
         description: "Could not remove task from server.",
         type: "error"
       })
+    } finally {
+      setTaskToDelete(null)
     }
   }
 
@@ -225,6 +233,26 @@ function DashboardContent() {
         taskToEdit={taskToEdit}
         onSave={handleSaveTask}
       />
+
+      {/* Delete Confirmation Modal */}
+      <Dialog open={!!taskToDelete} onOpenChange={(open) => !open && setTaskToDelete(null)}>
+        <DialogHeader>
+          <DialogTitle className="text-destructive flex items-center gap-2">
+            <Trash2 className="h-5 w-5 text-destructive" /> Delete Task
+          </DialogTitle>
+          <DialogDescription>
+            Are you sure you want to delete <span className="font-semibold text-foreground">"{taskToDelete?.title}"</span>? This task will be permanently removed.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="outline" onClick={() => setTaskToDelete(null)}>
+            Cancel
+          </Button>
+          <Button variant="destructive" onClick={confirmDeleteTask}>
+            Delete Task
+          </Button>
+        </DialogFooter>
+      </Dialog>
     </div>
   )
 }
